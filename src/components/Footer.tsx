@@ -1,6 +1,15 @@
 import { SOURCES } from "@/lib/feeds";
 
+function uniqueOutlets() {
+  const seen = new Map<string, (typeof SOURCES)[number]>();
+  for (const s of SOURCES) {
+    if (!seen.has(s.name)) seen.set(s.name, s);
+  }
+  return [...seen.values()];
+}
+
 export function Footer() {
+  const outlets = uniqueOutlets();
   return (
     <footer className="border-t border-[var(--rule)] mt-16">
       <div className="mx-auto max-w-6xl px-4 md:px-6 py-10">
@@ -19,7 +28,7 @@ export function Footer() {
               Sources
             </div>
             <ul className="space-y-1.5">
-              {SOURCES.map((s) => (
+              {outlets.map((s) => (
                 <li key={s.id}>
                   <a
                     href={s.homepage}

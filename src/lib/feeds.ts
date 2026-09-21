@@ -7,7 +7,31 @@ export type Category =
   | "Startups"
   | "Security"
   | "Science"
-  | "Business";
+  | "Business"
+  | "Web";
+
+// Categories with their own nav link + /category/[slug] page.
+// "Web" (Hacker News) is intentionally left out of the nav: it's a mixed
+// link aggregator, not a single-topic beat, but its stories still carry the
+// tag and are reachable at /category/web.
+export const NAV_CATEGORIES: Category[] = [
+  "AI",
+  "Startups",
+  "Software",
+  "Hardware",
+  "Science",
+  "Security",
+  "Business",
+];
+
+export function categoryToSlug(category: Category): string {
+  return category.toLowerCase();
+}
+
+export function slugToCategory(slug: string): Category | undefined {
+  const all: Category[] = [...NAV_CATEGORIES, "Web"];
+  return all.find((c) => categoryToSlug(c) === slug.toLowerCase());
+}
 
 export type Source = {
   id: string;
@@ -31,6 +55,13 @@ export type Story = {
 // Real, publicly published RSS feeds from established tech outlets.
 export const SOURCES: Source[] = [
   {
+    id: "techcrunch-ai",
+    name: "TechCrunch",
+    url: "https://techcrunch.com/category/artificial-intelligence/feed/",
+    homepage: "https://techcrunch.com/category/artificial-intelligence/",
+    category: "AI",
+  },
+  {
     id: "techcrunch",
     name: "TechCrunch",
     url: "https://techcrunch.com/feed/",
@@ -45,11 +76,25 @@ export const SOURCES: Source[] = [
     category: "Software",
   },
   {
+    id: "engadget",
+    name: "Engadget",
+    url: "https://www.engadget.com/rss.xml",
+    homepage: "https://www.engadget.com",
+    category: "Hardware",
+  },
+  {
     id: "arstechnica",
     name: "Ars Technica",
     url: "https://feeds.arstechnica.com/arstechnica/index",
     homepage: "https://arstechnica.com",
     category: "Science",
+  },
+  {
+    id: "krebsonsecurity",
+    name: "Krebs on Security",
+    url: "https://krebsonsecurity.com/feed/",
+    homepage: "https://krebsonsecurity.com",
+    category: "Security",
   },
   {
     id: "wired",
@@ -59,18 +104,11 @@ export const SOURCES: Source[] = [
     category: "Business",
   },
   {
-    id: "engadget",
-    name: "Engadget",
-    url: "https://www.engadget.com/rss.xml",
-    homepage: "https://www.engadget.com",
-    category: "Hardware",
-  },
-  {
     id: "hackernews",
     name: "Hacker News",
     url: "https://hnrss.org/frontpage",
     homepage: "https://news.ycombinator.com",
-    category: "AI",
+    category: "Web",
   },
 ];
 
@@ -227,9 +265,35 @@ async function fetchFeed(source: Source): Promise<Story[]> {
   }
 }
 
+// The same article can surface from more than one feed (e.g. TechCrunch's
+// general feed and its AI-only feed both carry an AI story). Keep the first
+// occurrence — SOURCES is ordered from most to least specific — and drop the
+// rest so a story never appears twice.
+function dedupeByLink(stories: Story[]): Story[] {
+  const seen = new Set<string>();
+  const result: Story[] = [];
+  for (const story of stories) {
+    const key = story.link.replace(/\/+$/, "");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(story);
+  }
+  return result;
+}
+
 export async function getAllStories(): Promise<Story[]> {
   const results = await Promise.all(SOURCES.map(fetchFeed));
-  const stories = results.flat();
+  const stories = dedupeByLink(results.flat());
+  stories.sort(
+    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+  );
+  return stories;
+}
+
+export async function getStoriesByCategory(category: Category): Promise<Story[]> {
+  const relevantSources = SOURCES.filter((s) => s.category === category);
+  const results = await Promise.all(relevantSources.map(fetchFeed));
+  const stories = dedupeByLink(results.flat());
   stories.sort(
     (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
   );

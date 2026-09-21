@@ -1,6 +1,13 @@
-const CATEGORIES = ["AI", "Hardware", "Software", "Startups", "Security", "Business"];
+import Link from "next/link";
+import { NAV_CATEGORIES, categoryToSlug, type Category } from "@/lib/feeds";
 
-export function Header({ updatedAt }: { updatedAt: string }) {
+export function Header({
+  updatedAt,
+  active,
+}: {
+  updatedAt: string;
+  active?: Category;
+}) {
   const dateStr = new Date(updatedAt).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -23,28 +30,37 @@ export function Header({ updatedAt }: { updatedAt: string }) {
         </div>
 
         <div className="py-6 text-center border-t border-[var(--rule)]">
-          <a href="/" className="inline-block">
+          <Link href="/" className="inline-block">
             <h1 className="font-serif text-5xl md:text-6xl tracking-tight text-[var(--ink)]">
               Bytewire
             </h1>
-          </a>
+          </Link>
           <p className="mt-1.5 text-[13px] text-[var(--ink-muted)] tracking-wide">
             Technology news, wired in real time
           </p>
         </div>
 
         <nav className="flex items-center justify-center gap-5 md:gap-8 py-3 border-t border-[var(--rule)] text-[13px] font-medium overflow-x-auto">
-          <a href="/" className="text-[var(--ink)] whitespace-nowrap">
+          <Link
+            href="/"
+            className={`whitespace-nowrap ${
+              !active ? "text-[var(--accent)]" : "text-[var(--ink)] hover:text-[var(--accent)] transition-colors"
+            }`}
+          >
             Front Page
-          </a>
-          {CATEGORIES.map((c) => (
-            <a
+          </Link>
+          {NAV_CATEGORIES.map((c) => (
+            <Link
               key={c}
-              href={`/#${c.toLowerCase()}`}
-              className="text-[var(--ink-soft)] hover:text-[var(--accent)] transition-colors whitespace-nowrap"
+              href={`/category/${categoryToSlug(c)}`}
+              className={`whitespace-nowrap transition-colors ${
+                active === c
+                  ? "text-[var(--accent)]"
+                  : "text-[var(--ink-soft)] hover:text-[var(--accent)]"
+              }`}
             >
               {c}
-            </a>
+            </Link>
           ))}
         </nav>
       </div>
